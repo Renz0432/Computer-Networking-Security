@@ -1,16 +1,10 @@
 import os
-import cv2
-import numpy as np
 import time
 from flask import Flask, render_template, redirect, url_for, request, flash, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
-
-# Global variable to hold the active camera index
-# 0 is usually the built-in webcam. 1 or 2 is typically Iriun/External webcams.
-CURRENT_CAMERA_INDEX = 0
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'super-secure-hardcoded-fallback-key')
@@ -114,6 +108,20 @@ def dashboard():
                            failed_logins=failed_logins, 
                            camera_breaches=camera_breaches, 
                            network_threats=network_threats)
+
+@app.route('/log_camera_switch', methods=['POST'])
+@login_required
+def log_camera_switch():
+    data = request.get_json()
+    camera_label = data.get('camera_label', 'Unknown Device')
+    
+    # Fire off your standardized audit log trail safely!
+    log_security_event(
+        event_type='Camera', 
+        description=f'User {current_user.username} switched live view to: {camera_label}', 
+        status='Success'
+    )
+    return {'status': 'logged'}, 200
     
 @app.route('/notifications')
 @login_required
