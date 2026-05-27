@@ -146,11 +146,11 @@ def generate_live_frames():
             scan_y = (frame_count * 3) % 360
             cv2.line(img, (0, scan_y), (640, scan_y), (74, 180, 100), 2)
             
-            # Print dynamic telemetry texts overlaying the console box
+            # FIX: Swapped out the incorrect monospace font constant names
             status_text = f"STREAM CHANNEL ACTIVE [INDEX {CURRENT_CAMERA_INDEX}]"
             cv2.putText(img, "🔴 LIVE SECURE FEED", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (80, 80, 240), 2)
-            cv2.putText(img, status_text, (30, 85), cv2.FONT_HERSHEY_MONOSPACE, 0.5, (180, 180, 180), 1)
-            cv2.putText(img, f"FPS: 24.0 // SYS_TIME: {time.strftime('%H:%M:%S')}", (30, 320), cv2.FONT_HERSHEY_MONOSPACE, 0.4, (120, 120, 120), 1)
+            cv2.putText(img, status_text, (30, 85), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (180, 180, 180), 1)
+            cv2.putText(img, f"FPS: 24.0 // SYS_TIME: {time.strftime('%H:%M:%S')}", (30, 320), cv2.FONT_HERSHEY_PLAIN, 0.9, (120, 120, 120), 1)
             
             # Encode frame to JPEG
             ret, buffer = cv2.imencode('.jpg', img)
