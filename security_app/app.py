@@ -61,6 +61,17 @@ def log_security_event(event_type, description, status):
 with app.app_context():
     db.create_all()
 
+# Check if our exact admin user exists
+    admin_account = Account.query.filter_by(username="admin").first()
+    
+    if not admin_account:
+        # This forces Flask to generate a hash using its own active library version
+        native_admin = Account(username="admin", is_online=False)
+        native_admin.set_password("CNSAdministration123!")
+        db.session.add(native_admin)
+        db.session.commit()
+        print("🚀 Emergency Admin account created successfully using native hashing!")
+
 # --- ROUTES ---
 
 @app.route('/', methods=['GET', 'POST'])
