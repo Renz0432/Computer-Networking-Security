@@ -104,19 +104,6 @@ def dashboard():
                            failed_logins=failed_logins, 
                            camera_breaches=camera_breaches, 
                            network_threats=network_threats)
-
-@app.route('/change_camera', methods=['POST'])
-@login_required
-def change_camera():
-    global CURRENT_CAMERA_INDEX
-    camera_choice = request.form.get('camera_source')
-    if camera_choice == 'iriun':
-        CURRENT_CAMERA_INDEX = 1  
-        log_security_event('Camera', 'Switched feed profile to Iriun Virtual Camera', 'Success')
-    else:
-        CURRENT_CAMERA_INDEX = 0  
-        log_security_event('Camera', 'Switched feed profile to Integrated Webcam', 'Success')
-    return redirect(url_for('dashboard'))
     
 @app.route('/notifications')
 @login_required
