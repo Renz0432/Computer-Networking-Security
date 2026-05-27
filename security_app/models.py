@@ -22,6 +22,7 @@ class Log(db.Model):
     __tablename__ = 'log'
     id = db.Column(db.Integer, primary_key=True)
     type = db.Column(db.String(50), nullable=False)        # 'Login', 'Camera', 'Network'
-    description = db.Column(db.String(255), nullable=False) # E.g., 'Failed password attempt'
+    description = db.Column(db.String(255), nullable=False) 
     date = db.Column(db.DateTime, default=datetime.utcnow)
-    status = db.Column(db.String(50), nullable=False)      # 'Success' or 'Failed'
+    status = db.Column(db.String(50), nullable=False)      
+    ip_address = db.Column(db.String(50), nullable=True)   # <--- FIX: Ensure this exact line exists!
