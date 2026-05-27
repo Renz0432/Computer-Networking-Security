@@ -22,19 +22,20 @@ def load_user(user_id):
 
 # Helper function to create standardized audit trails
 def log_security_event(event_type, description, status):
-    new_log = Log(type=event_type, description=description, date=datetime.now(), status=status)
+    user_ip = request.remote_addr if request else "System"
+    new_log = Log(
+        type=event_type, 
+        description=description, 
+        date=datetime.now(), 
+        status=status,
+        ip_address=user_ip
+    )
     db.session.add(new_log)
     db.session.commit()
 
-# Application Initialization Route (Seeds an admin user safely if missing)
-@app.before_request
-def create_tables():
+# Clean initialization: Creates empty tables if missing, no hardcoded users.
+with app.app_context():
     db.create_all()
-    if not Account.query.filter_by(username="Renz").first():
-        admin = Account(username="Renz", is_online=False)
-        admin.set_password("SecurePassword123!") # Change on first run
-        db.session.add(admin)
-        db.session.commit()
 
 # --- ROUTES ---
 
