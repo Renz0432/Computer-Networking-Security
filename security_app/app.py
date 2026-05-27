@@ -1,9 +1,14 @@
 import os
+import cv2
 from flask import Flask, render_template, redirect, url_for, request, flash, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+
+# Global variable to hold the active camera index
+# 0 is usually the built-in webcam. 1 or 2 is typically Iriun/External webcams.
+CURRENT_CAMERA_INDEX = 0
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'super-secure-hardcoded-fallback-key')
@@ -98,17 +103,48 @@ def dashboard():
                            camera_breaches=camera_breaches, 
                            network_threats=network_threats)
 
+@app.route('/change_camera', methods=['POST'])
+@login_required
+def change_camera():
+    global CURRENT_CAMERA_INDEX
+    camera_choice = request.form.get('camera_source')
+    
+    if camera_choice == 'iriun':
+        CURRENT_CAMERA_INDEX = 1  # Or 2, depending on how many cameras you have plugged in
+        log_security_event('Camera', 'Switched feed profile to Iriun Virtual Camera', 'Success')
+    else:
+        CURRENT_CAMERA_INDEX = 0  # Default Integrated Webcam
+        log_security_event('Camera', 'Switched feed profile to Integrated Webcam', 'Success')
+        
+    return redirect(url_for('dashboard'))
+
+def generate_live_frames():
+    """Continuously captures frames from the selected hardware webcam."""
+    global CURRENT_CAMERA_INDEX
+    # Open the connection to the physical camera hardware
+    camera = cv2.VideoCapture(CURRENT_CAMERA_INDEX)
+    
+    while True:
+        success, frame = camera.read()
+        if not success:
+            break
+        else:
+            # Encode the image frame into JPEG formats
+            ret, buffer = cv2.imencode('.jpg', frame)
+            frame_bytes = buffer.tobytes()
+            
+            # Yield the output stream frames sequentially using multipart protocol
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                   
+    camera.release() # Release hardware locks when done
+
 @app.route('/video_feed')
 @login_required
 def video_feed():
-    if request.headers.get('X-Scanner-Heuristic'):
-        log_security_event('Camera', 'Unauthorized hardware parsing vector detected', 'Failed')
-        abort(403)
-    
-    log_security_event('Camera', 'Validated interface container video initialization', 'Success')
-    
-    # Redirects the browser to load a clean, secure static camera layout loop
-    return redirect("https://images.unsplash.com/photo-1557682250-33bd709cbe85?q=80&w=600&auto=format&fit=crop")
+    """Streams live video frames instead of redirecting to a static image."""
+    from flask import Response
+    return Response(generate_live_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/notifications')
 @login_required
