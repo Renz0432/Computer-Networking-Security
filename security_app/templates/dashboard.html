@@ -4,28 +4,23 @@
 <div class="flex flex-col items-center gap-8">
     <div class="w-full max-w-4xl bg-white p-6 rounded-xl shadow-sm border border-gray-200">
         <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Classroom Camera
+            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Live Classroom Feed
         </h3>
         
         <div class="flex justify-center items-center bg-black rounded-lg mx-auto overflow-hidden shadow-inner" style="width: 640px; height: 360px;">
-            <img src="{{ url_for('video_feed') }}" alt="Classroom Camera Feed" class="w-full h-full object-cover" />
+            <video id="webcam" autoplay playsinline class="w-full h-full object-cover"></video>
         </div>
-    
-        <div class="mt-4 flex justify-center">
-            <form action="{{ url_for('change_camera') }}" method="POST" class="flex items-center gap-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                <label class="text-sm font-medium text-gray-600">Select Video Input Source:</label>
-                <select name="camera_source" class="border border-gray-300 rounded p-1 text-sm bg-white">
-                    <option value="integrated">Integrated Laptop Camera (Index 0)</option>
-                    <option value="iriun">Iriun Webcam Driver (Index 1)</option>
-                </select>
-                <button type="submit" class="bg-[#4a5343] text-white text-xs px-3 py-1.5 rounded hover:bg-opacity-90 transition">
-                    Apply Hardware Shift
-                </button>
-            </form>
-        </div>
-        
-    </div>
 
+        <div class="mt-4 flex justify-center">
+            <div class="flex items-center gap-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                <label class="text-sm font-medium text-gray-600">Select Input Source:</label>
+                <select id="cameraSelect" class="border border-gray-300 rounded p-1 text-sm bg-white max-w-xs">
+                    <option value="">Detecting Devices...</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
     <div class="w-full max-w-4xl grid grid-cols-3 gap-6 text-center">
         <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
             <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Failed Login Attacks</div>
@@ -41,4 +36,52 @@
         </div>
     </div>
 </div>
+
+<script>
+const videoElement = document.getElementById('webcam');
+const cameraSelect = document.getElementById('cameraSelect');
+
+// Query your operating system for webcams and Iriun drivers
+async function getCameras() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+    
+    cameraSelect.innerHTML = '';
+    videoDevices.forEach((device, index) => {
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        option.text = device.label || `Camera ${index + 1}`;
+        cameraSelect.appendChild(option);
+    });
+}
+
+// Attach the chosen hardware source stream to the video box
+async function startStream(deviceId) {
+    if (window.stream) {
+        window.stream.getTracks().forEach(track => track.stop());
+    }
+    
+    const constraints = {
+        video: deviceId ? { deviceId: { exact: deviceId } } : true
+    };
+    
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        window.stream = stream;
+        videoElement.srcObject = stream;
+    } catch (error) {
+        console.error('Webcam deployment failed:', error);
+    }
+}
+
+// Event Listeners for running changes on the fly
+cameraSelect.addEventListener('change', () => startStream(cameraSelect.value));
+
+// Core Initialization
+navigator.mediaDevices.getUserMedia({ video: true })
+    .then(() => {
+        getCameras().then(() => startStream(cameraSelect.value));
+    })
+    .catch(err => console.error("Permissions denied", err));
+</script>
 {% endblock %}
