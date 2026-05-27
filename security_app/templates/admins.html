@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block page_title %}Admin Management{% endblock %}
+{% block content %}
+<div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm max-w-5xl mx-auto">
+    <div class="overflow-hidden border border-gray-200 rounded-xl">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-gray-50 border-b border-gray-200 text-gray-700 font-semibold">
+                    <th class="p-4 w-24">ID</th>
+                    <th class="p-4">Username</th>
+                    <th class="p-4">Role</th>
+                    <th class="p-4">Status</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 text-gray-600">
+                {% for admin in admins %}
+                <tr class="hover:bg-gray-50">
+                    <td class="p-4 font-mono text-gray-400">{{ admin.id }}</td>
+                    <td class="p-4 font-medium">{{ admin.username }}</td>
+                    <td class="p-4">
+                        <span class="bg-amber-100 text-amber-800 px-3 py-0.5 rounded text-xs font-semibold">Admin</span>
+                    </td>
+                    <td class="p-4">
+                        {% if admin.is_online %}
+                        <span class="bg-green-500 text-white px-3 py-0.5 rounded text-xs font-bold tracking-wide">Online</span>
+                        {% else %}
+                        <span class="bg-gray-300 text-gray-600 px-3 py-0.5 rounded text-xs font-bold tracking-wide">Offline</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block page_title %}Notifications{% endblock %}
+{% block content %}
+<div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm max-w-6xl mx-auto">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">Activity History Log</h3>
+    <div class="overflow-hidden border border-gray-300 rounded-lg">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-gray-50 border-b border-gray-300 text-gray-700 font-semibold">
+                    <th class="p-4 border-r border-gray-300">Type</th>
+                    <th class="p-4 border-r border-gray-300">Description</th>
+                    <th class="p-4 border-r border-gray-300">Date & Time</th>
+                    <th class="p-4">Status</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 text-gray-600">
+                {% for log in logs %}
+                <tr class="hover:bg-gray-50">
+                    <td class="p-4 border-r border-gray-300 font-medium">{{ log.type }}</td>
+                    <td class="p-4 border-r border-gray-300 font-mono text-sm">{{ log.description }}</td>
+                    <td class="p-4 border-r border-gray-300 text-sm">{{ log.date.strftime('%m/%d/%Y %I:%M%p') }}</td>
+                    <td class="p-4">
+                        <span class="px-3 py-1 rounded-full text-xs font-bold {{ 'bg-green-100 text-green-800' if log.status == 'Success' else 'bg-red-100 text-red-800' }}">
+                            {{ log.status }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
