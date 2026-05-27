@@ -15,6 +15,16 @@ CURRENT_CAMERA_INDEX = 0
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'super-secure-hardcoded-fallback-key')
 
+app.config['SESSION_PERMANENT'] = False
+app.config['REMEMBER_COOKIE_DURATION'] = 0
+
+# 🌟 ADD THESE CRITICAL SECURITY FLAGS:
+# 1. Prevent JavaScript from reading the cookie (Stops XSS stealing)
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+# 2. Only transmit cookies over encrypted HTTPS links (Stops packet sniffing)
+app.config['SESSION_COOKIE_SECURE'] = True
+# 3. Prevent the browser from sending cookies with cross-site requests (Stops CSRF attacks)
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 # Connection variables reading from dynamic environments
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_PRIVATE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
