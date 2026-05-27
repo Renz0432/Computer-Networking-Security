@@ -1,20 +1,44 @@
 import os
 from flask import Flask, render_template, redirect, url_for, request, flash, abort
-from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from models import db, Account, Log
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'super-secure-hardcoded-fallback-key')
 
-# CRITICAL: Use Railway Internal Private Network Domain here
-# Example: postgresql://postgres:password@postgresql.railway.internal:5432/railway
+# Connection variables reading from dynamic environments
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_PRIVATE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-db.init_app(app)
+db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+
+# --- MODELS (Defined directly here to prevent import errors) ---
+
+class Account(UserMixin, db.Model):
+    __tablename__ = 'account'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(150), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    is_online = db.Column(db.Boolean, default=False)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password, method='scrypt')
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+class Log(db.Model):
+    __tablename__ = 'log'
+    id = db.Column(db.Integer, primary_key=True)
+    type = db.Column(db.String(50), nullable=False)        
+    description = db.Column(db.String(255), nullable=False) 
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(50), nullable=False)      
+    ip_address = db.Column(db.String(50), nullable=True)   # Explicitly matched definition
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -33,7 +57,7 @@ def log_security_event(event_type, description, status):
     db.session.add(new_log)
     db.session.commit()
 
-# Clean initialization: Creates empty tables if missing, no hardcoded users.
+# Clean initialization: Creates empty tables if missing
 with app.app_context():
     db.create_all()
 
@@ -57,7 +81,6 @@ def login():
             log_security_event('Login', f'User {username} logged in successfully', 'Success')
             return redirect(url_for('dashboard'))
         else:
-            # Audit log for failed authentication attempts
             log_security_event('Login', f'Failed login attempt for username: {username}', 'Failed')
             flash('Invalid username or password.', 'error')
             
@@ -66,7 +89,6 @@ def login():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    # Calculate key metrics matching your card updates
     failed_logins = Log.query.filter_by(type='Login', status='Failed').count()
     camera_breaches = Log.query.filter_by(type='Camera', status='Failed').count()
     network_threats = Log.query.filter_by(type='Network', status='Failed').count()
@@ -79,13 +101,10 @@ def dashboard():
 @app.route('/video_feed')
 @login_required
 def video_feed():
-    """Simulated production access protection check."""
-    # If unauthorized parameter signatures or headers match systemic scanners, tag them
     if request.headers.get('X-Scanner-Heuristic'):
         log_security_event('Camera', 'Unauthorized hardware parsing vector detected', 'Failed')
         abort(403)
     
-    # Simulate a healthy feed authorization check
     log_security_event('Camera', 'Validated interface container video initialization', 'Success')
     return "Camera Stream Active"
 
@@ -112,6 +131,5 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    # Pull the port dynamic variable assigned by Railway, fallback to 5000 locally
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
