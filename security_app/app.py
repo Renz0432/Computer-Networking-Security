@@ -176,7 +176,7 @@ def generate_live_frames():
         camera.release()
 
 @app.route('/video_feed')
-# Comment out or remove @login_required just to test!
+@login_required
 def video_feed():
     from flask import Response
     return Response(generate_live_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
