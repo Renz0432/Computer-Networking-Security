@@ -74,8 +74,18 @@ async function startStream(deviceId) {
     }
 }
 
-// Event Listeners for running changes on the fly
-cameraSelect.addEventListener('change', () => startStream(cameraSelect.value));
+// 🌟 PUT THE UPDATED CODE RIGHT HERE:
+cameraSelect.addEventListener('change', () => {
+    const selectedText = cameraSelect.options[cameraSelect.selectedIndex].text;
+    startStream(cameraSelect.value);
+
+    // Send an un-intrusive alert background request to your new Flask route
+    fetch('/log_camera_switch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ camera_label: selectedText })
+    }).catch(err => console.error("Could not write security audit log trail:", err));
+});
 
 // Core Initialization
 navigator.mediaDevices.getUserMedia({ video: true })
