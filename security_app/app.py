@@ -1,7 +1,7 @@
 import os
 from flask import Flask, render_template, redirect, url_for, request, flash, abort
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from models import db, Account, Log
+from models import db, account, log
 from datetime import datetime
 
 app = Flask(__name__)
