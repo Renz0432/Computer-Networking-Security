@@ -4,20 +4,13 @@
 <div class="flex flex-col items-center gap-8">
     <div class="w-full max-w-4xl bg-white p-6 rounded-xl shadow-sm border border-gray-200">
         <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Live Classroom Feed
+            <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span> Live IP CCTV Feed
         </h3>
         
         <div class="flex justify-center items-center bg-black rounded-lg mx-auto overflow-hidden shadow-inner" style="width: 640px; height: 360px;">
-            <video id="webcam" autoplay playsinline class="w-full h-full object-cover"></video>
-        </div>
-
-        <div class="mt-4 flex justify-center">
-            <div class="flex items-center gap-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                <label class="text-sm font-medium text-gray-600">Select Input Source:</label>
-                <select id="cameraSelect" class="border border-gray-300 rounded p-1 text-sm bg-white max-w-xs">
-                    <option value="">Detecting Devices...</option>
-                </select>
-            </div>
+            <img src="{{ url_for('video_feed') }}" 
+                 alt="IP Camera Stream Offline" 
+                 class="w-full h-full object-cover" />
         </div>
     </div>
     
@@ -37,61 +30,4 @@
     </div>
 </div>
 
-<script>
-const videoElement = document.getElementById('webcam');
-const cameraSelect = document.getElementById('cameraSelect');
-
-// Query your operating system for webcams and Iriun drivers
-async function getCameras() {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const videoDevices = devices.filter(device => device.kind === 'videoinput');
-    
-    cameraSelect.innerHTML = '';
-    videoDevices.forEach((device, index) => {
-        const option = document.createElement('option');
-        option.value = device.deviceId;
-        option.text = device.label || `Camera ${index + 1}`;
-        cameraSelect.appendChild(option);
-    });
-}
-
-// Attach the chosen hardware source stream to the video box
-async function startStream(deviceId) {
-    if (window.stream) {
-        window.stream.getTracks().forEach(track => track.stop());
-    }
-    
-    const constraints = {
-        video: deviceId ? { deviceId: { exact: deviceId } } : true
-    };
-    
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        window.stream = stream;
-        videoElement.srcObject = stream;
-    } catch (error) {
-        console.error('Webcam deployment failed:', error);
-    }
-}
-
-// 🌟 PUT THE UPDATED CODE RIGHT HERE:
-cameraSelect.addEventListener('change', () => {
-    const selectedText = cameraSelect.options[cameraSelect.selectedIndex].text;
-    startStream(cameraSelect.value);
-
-    // Send an un-intrusive alert background request to your new Flask route
-    fetch('/log_camera_switch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ camera_label: selectedText })
-    }).catch(err => console.error("Could not write security audit log trail:", err));
-});
-
-// Core Initialization
-navigator.mediaDevices.getUserMedia({ video: true })
-    .then(() => {
-        getCameras().then(() => startStream(cameraSelect.value));
-    })
-    .catch(err => console.error("Permissions denied", err));
-</script>
 {% endblock %}
