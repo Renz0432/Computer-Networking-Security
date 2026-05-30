@@ -31,6 +31,9 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+# CCTV Target Source (Fetched securely from your Railway Environment variables)
+CCTV_RTSP_URL = os.environ.get('CCTV_STREAM_URL')
+
 # --- MODELS (Defined directly here to prevent import errors) ---
 
 class Account(UserMixin, db.Model):
@@ -76,6 +79,49 @@ def log_security_event(event_type, description, status):
 with app.app_context():
     db.create_all()
 
+# --- THREAD-SAFE CCTV BUFFER ENGINE ---
+
+class SecureCameraStream:
+    def __init__(self, source):
+        self.source = source
+        self.frame = None
+        self.started = False
+        self.lock = threading.Lock()
+
+    def start(self):
+        if self.started:
+            return
+        self.started = True
+        # Spin up a dedicated background worker to intercept network frames
+        threading.Thread(target=self._update, daemon=True).start()
+
+    def _update(self):
+        if not self.source:
+            print("❌ Security Configuration Error: 'CCTV_STREAM_URL' is missing on Railway!")
+            return
+
+        cap = cv2.VideoCapture(self.source)
+        while self.started:
+            success, frame = cap.read()
+            if not success:
+                time.sleep(1)  # Rest brief interval before retrying broken network sockets
+                continue
+            
+            # Constrain image geometry rules to match the dashboard dimensions
+            frame = cv2.resize(frame, (640, 360))
+            ret, buffer = cv2.imencode('.jpg', frame)
+            
+            with self.lock:
+                self.frame = buffer.tobytes()
+        cap.release()
+
+    def get_frame(self):
+        with self.lock:
+            return self.frame
+
+# Single global manager instance to capture stream frames
+cctv_stream = SecureCameraStream(CCTV_RTSP_URL)
+
 # --- ROUTES ---
 
 @app.route('/', methods=['GET', 'POST'])
@@ -114,19 +160,31 @@ def dashboard():
                            camera_breaches=camera_breaches, 
                            network_threats=network_threats)
 
-@app.route('/log_camera_switch', methods=['POST'])
+@app.route('/video_feed')
 @login_required
-def log_camera_switch():
-    data = request.get_json()
-    camera_label = data.get('camera_label', 'Unknown Device')
-    
-    # Fire off your standardized audit log trail safely!
-    log_security_event(
-        event_type='Camera', 
-        description=f'User {current_user.username} switched live view to: {camera_label}', 
-        status='Success'
-    )
-    return {'status': 'logged'}, 200
+def video_feed():
+    if not current_user.is_authenticated:
+        return abort(403)
+
+    # Initialize frame worker thread if first connection hits the pipeline
+    cctv_stream.start()
+
+    def stream_generator():
+        while True:
+            # Drop connection pipeline immediately if user logs out mid-session
+            if not current_user.is_authenticated:
+                break
+                
+            frame_bytes = cctv_stream.get_frame()
+            if frame_bytes is None:
+                time.sleep(0.1)
+                continue
+                
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+            time.sleep(0.04)  # Throttle transmission rate to balance processing overhead (~25 FPS)
+
+    return Response(stream_generator(), mimetype='multipart/x-mixed-replace; boundary=frame')
     
 @app.route('/notifications')
 @login_required
