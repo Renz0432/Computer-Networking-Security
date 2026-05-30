@@ -1,12 +1,14 @@
 import os
+import threading
 import time
-from flask import Flask, render_template, redirect, url_for, request, flash, abort
+import cv2
+from datetime import datetime
+from flask import Flask, render_template, redirect, url_for, request, flash, abort, Response
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-from datetime import datetime
-from werkzeug.security import generate_password_hash, check_password_hash
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'super-secure-hardcoded-fallback-key')
